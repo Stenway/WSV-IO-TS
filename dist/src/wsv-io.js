@@ -8,19 +8,37 @@ const wsv_1 = require("@stenway/wsv");
 // ----------------------------------------------------------------------
 class WsvFile {
     static loadSync(filePath, preserveWhitespacesAndComments = true) {
-        let reliableTxtDocument = reliabletxt_io_1.ReliableTxtFile.loadSync(filePath);
-        let wsvDocument = wsv_1.WsvDocument.parse(reliableTxtDocument.text, preserveWhitespacesAndComments);
+        const reliableTxtDocument = reliabletxt_io_1.ReliableTxtFile.loadSync(filePath);
+        const wsvDocument = wsv_1.WsvDocument.parse(reliableTxtDocument.text, preserveWhitespacesAndComments);
         wsvDocument.encoding = reliableTxtDocument.encoding;
         return wsvDocument;
     }
     static saveSync(document, filePath, preserveWhitespacesAndComments = true) {
-        let text = document.toString(preserveWhitespacesAndComments);
+        const text = document.toString(preserveWhitespacesAndComments);
         reliabletxt_io_1.ReliableTxtFile.writeAllTextSync(text, filePath, document.encoding);
     }
+    static readJaggedArraySync(filePath) {
+        const document = WsvFile.loadSync(filePath, false);
+        return document.toJaggedArray();
+    }
+    static writeJaggedArraySync(jaggedArray, filePath, encoding = reliabletxt_1.ReliableTxtEncoding.Utf8) {
+        const document = wsv_1.WsvDocument.fromJaggedArray(jaggedArray, encoding);
+        WsvFile.saveSync(document, filePath, false);
+    }
     static appendSync(document, filePath, preserveWhitespacesAndComments = true) {
-        let text = document.toString(preserveWhitespacesAndComments);
-        let lines = reliabletxt_1.ReliableTxtLines.split(text);
+        const text = document.toString(preserveWhitespacesAndComments);
+        const lines = reliabletxt_1.ReliableTxtLines.split(text);
         reliabletxt_io_1.ReliableTxtFile.appendAllLinesSync(lines, filePath, document.encoding);
+    }
+    static appendJaggedArraySync(jaggedArray, filePath, createWithEncoding = reliabletxt_1.ReliableTxtEncoding.Utf8) {
+        const document = wsv_1.WsvDocument.fromJaggedArray(jaggedArray, createWithEncoding);
+        WsvFile.appendSync(document, filePath, false);
+    }
+    static appendLineSync(line, filePath, createWithEncoding = reliabletxt_1.ReliableTxtEncoding.Utf8, preserveWhitespacesAndComments = true) {
+        reliabletxt_io_1.ReliableTxtFile.appendAllLinesSync([line.toString(preserveWhitespacesAndComments)], filePath, createWithEncoding);
+    }
+    static appendLineValuesSync(values, filePath, createWithEncoding = reliabletxt_1.ReliableTxtEncoding.Utf8) {
+        reliabletxt_io_1.ReliableTxtFile.appendAllLinesSync([wsv_1.WsvLine.serialize(values)], filePath, createWithEncoding);
     }
 }
 exports.WsvFile = WsvFile;
@@ -37,11 +55,18 @@ class SyncWsvStreamReader {
         return this.reader.isClosed;
     }
     readLine() {
-        let lineStr = this.reader.readLine();
+        const lineStr = this.reader.readLine();
         if (lineStr === null) {
             return null;
         }
         return wsv_1.WsvLine.parse(lineStr, this.preserveWhitespacesAndComments);
+    }
+    readLineValues() {
+        const lineStr = this.reader.readLine();
+        if (lineStr === null) {
+            return null;
+        }
+        return wsv_1.WsvLine.parseAsArray(lineStr);
     }
     close() {
         this.reader.close();
@@ -57,12 +82,22 @@ class SyncWsvStreamWriter {
     get encoding() {
         return this.writer.encoding;
     }
-    writeLine(line) {
-        let lineStr = line.toString(this.preserveWhitespacesAndComments);
+    get isClosed() {
+        return this.writer.isClosed;
+    }
+    writeLineValues(values) {
+        const lineStr = wsv_1.WsvLine.serialize(values);
         this.writer.writeLine(lineStr);
     }
+    writeLine(line) {
+        const lineStr = line.toString(this.preserveWhitespacesAndComments);
+        this.writer.writeLine(lineStr);
+    }
+    writeLines(lines) {
+        this.writeDocument(new wsv_1.WsvDocument(lines));
+    }
     writeDocument(document) {
-        let content = document.toString(this.preserveWhitespacesAndComments);
+        const content = document.toString(this.preserveWhitespacesAndComments);
         this.writer.writeLine(content);
     }
     close() {
@@ -70,3 +105,4 @@ class SyncWsvStreamWriter {
     }
 }
 exports.SyncWsvStreamWriter = SyncWsvStreamWriter;
+//# sourceMappingURL=wsv-io.js.map
